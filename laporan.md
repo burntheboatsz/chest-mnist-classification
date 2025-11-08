@@ -1,4 +1,4 @@
-# Laporan Eksperimen Model #42
+# Laporan Eksperimen Model Deep Learning
 ## Klasifikasi Biner ChestMNIST: Cardiomegaly vs Pneumothorax
 
 **Nama:** Nafiz Ahmadin Harily  
