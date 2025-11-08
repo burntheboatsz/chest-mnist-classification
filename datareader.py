@@ -70,37 +70,43 @@ class FilteredBinaryDataset(Dataset):
             
         return image, torch.tensor([label])
 
-def get_data_loaders(batch_size):
-    # Data augmentation untuk training - optimized untuk medical imaging
-    # Menggunakan 224x224 untuk maximum detail (ImageNet standard)
+def get_data_loaders(batch_size, img_size=64):
+    # Resize ke ukuran yang lebih besar dari 28 tapi tidak terlalu besar (64x64 bagus)
+    # Simplified data augmentation untuk training (menghindari lambat di Windows)
     train_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((224, 224), antialias=True),
+        transforms.Resize((img_size, img_size), antialias=True),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(degrees=10),  # Dikurangi untuk medical images
-        transforms.RandomAffine(
-            degrees=0,
-            translate=(0.08, 0.08),  # Dikurangi sedikit
-            scale=(0.92, 1.08),      # Range lebih kecil
-            shear=3                   # Dikurangi untuk medical images
-        ),
-        # Random brightness dan contrast untuk variasi
-        transforms.ColorJitter(brightness=0.1, contrast=0.1),
-        transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.RandomRotation(degrees=10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+        transforms.Normalize(mean=[.5], std=[.5]),
     ])
     
-    # Validation transform - tanpa augmentation
+    # Transform untuk validation (tanpa augmentasi)
     val_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((224, 224), antialias=True),
-        transforms.Normalize(mean=[0.5], std=[0.5]),
+        transforms.Resize((img_size, img_size), antialias=True),
+        transforms.Normalize(mean=[.5], std=[.5]),
     ])
 
     train_dataset = FilteredBinaryDataset('train', train_transform)
     val_dataset = FilteredBinaryDataset('test', val_transform)
     
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+    # Fixed for Windows: removed persistent_workers to avoid shared memory issues
+    train_loader = DataLoader(
+        dataset=train_dataset, 
+        batch_size=batch_size, 
+        shuffle=True, 
+        num_workers=0,  # Set to 0 for Windows compatibility
+        pin_memory=True
+    )
+    val_loader = DataLoader(
+        dataset=val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=0,  # Set to 0 for Windows compatibility
+        pin_memory=True
+    )
     
     n_classes = 2
     n_channels = 1
@@ -109,7 +115,6 @@ def get_data_loaders(batch_size):
     print(f"Kelas yang digunakan: {NEW_CLASS_NAMES[0]} (Label 0) dan {NEW_CLASS_NAMES[1]} (Label 1)")
     print(f"Jumlah data training: {len(train_dataset)}")
     print(f"Jumlah data validasi: {len(val_dataset)}")
-    print(f"Input size: 224x224 (ImageNet standard for maximum accuracy)")
     
     return train_loader, val_loader, n_classes, n_channels
 
